@@ -33,6 +33,9 @@ public class PairCreation extends Interactions implements Function{
 	System.err.println("producedScale " + producedScale);
     }
 
+    public double getProducedMass(){
+        return producedMass;
+    }
 
 
     /** Differential cross section dsigma/dy/drho [cm^2]
@@ -58,31 +61,81 @@ public class PairCreation extends Interactions implements Function{
 
     /** Differential cross section dsigma/dy [cm^2]
 	y = 1 - Erecoiling/Eincoming -- inelasticity parameter    */
-    public double getDSigmaDy(double y){
-	if(!isValidInelasticity(y)) return 0.0;
-	double factor = Alpha*Alpha*Re*Re*producedScale*producedScale*
-	    2.0/(3.0*Math.PI)*(1.0-y)/y;
-	double chargeFactor = 0.0;
-	double rhoBound = (1.0-6.0*mass*mass/(energy*energy*(1.0-y)))*
-	    Math.sqrt(1.0-4.0*producedMass/(energy*y));
+    public double getFactor() {
+        return Alpha*Alpha*Re*Re*producedScale*producedScale*2.0/(3.0*Math.PI);
+    }
 
-	for(int i=0;i<s.NumberOfSpecies[s.getMaterialNumber( )];i++){
-	    PairCreation paircreation = this;
-	    // The asymmetry term integration
-	    para[0]=y;para[1]=(double )i; 
-	    double sum;
-	    if(y<getYmaxCharge(i)){
-		sum = Integration.RombergIntegral(paircreation, 
+    public double getDSigmaDy(double y){
+	    if(!isValidInelasticity(y)) return 0.0;
+	    double factor = getFactor()*(1.0-y)/y;
+        double chargeFactor = getChargeFactor(y);
+	    double dSigmaDy = factor*chargeFactor;
+	    //System.err.println("y= " + y + " dSigma/dy = " + dSigmaDy);
+	    return dSigmaDy>0? dSigmaDy:0.0;
+    }
+
+    public double getDSigmaDyHighMass(double y){
+        double factor = getFactor()*(1.0-y)/y;
+        double chargeFactor = getChargeFactor(y);
+        double dSigmaDy = factor*chargeFactor;
+        return dSigmaDy;
+    }
+
+    public double getChargeFactor(double y){
+	    double chargeFactor = 0.0;
+        double rhoBound = 0.0;
+        if ((1.0-4.0*producedMass/(energy*y))>=0){
+	        rhoBound = (1.0-6.0*mass*mass/(energy*energy*(1.0-y)))*
+	            Math.sqrt(1.0-4.0*producedMass/(energy*y));
+        }
+
+	    for(int i=0;i<s.NumberOfSpecies[s.getMaterialNumber( )];i++){
+	        PairCreation paircreation = this;
+	        // The asymmetry term integration
+	        para[0]=y;para[1]=(double )i; 
+	        double sum;
+	        if(y<getYmaxCharge(i)){
+		        sum = Integration.RombergIntegral(paircreation, 
                                5, para, -rhoBound, rhoBound);
-	    }else{
-		sum = 0.0;
-	    }
-	    chargeFactor += s.getCharge(i)*(s.getCharge(i)+getScreenFactor(i))
+                if(sum<0)
+                    sum = 0.0;
+	        }else{
+		        sum = 0.0;
+	        }
+	        chargeFactor += s.getCharge(i)*(s.getCharge(i)+getScreenFactor(i))
 		            *(double )(s.getNumberOfAtoms(i))*sum;
-	}
-	double dSigmaDy = factor*chargeFactor;
-	//System.err.println("y= " + y + " dSigma/dy = " + dSigmaDy);
-	return dSigmaDy;
+	    }
+        return chargeFactor;
+    }
+
+    public double getDSigmaDz(double z){
+        if(!isValidInelasticity(1.-z)) return 0.0;
+        double factor = getFactor()*z/(1.-z);
+        double chargeFactor = 0.0;
+        double rhoBound = 0.0;
+        if ((1.-4.*producedMass/(energy*(1.-z)))>=0){
+            rhoBound = (1.-6.*mass*mass/(energy*energy*z))*
+                 Math.sqrt(1.-4.*producedMass/(energy*(1.-z)));
+        }
+
+        for(int i=0;i<s.NumberOfSpecies[s.getMaterialNumber()];i++){
+            PairCreation paircreation = this;
+            // The asymmetry term integration
+            para[0]=(1.-z);para[1]=(double)i;
+            double sum;
+            if(z>1.-getYmaxCharge(i)){
+                sum = Integration.RombergIntegral(paircreation,
+                            5, para, -rhoBound, rhoBound);
+                if(sum<0)
+                    sum = 0.0;
+            }else{
+                sum = 0.0;
+            }
+            chargeFactor += s.getCharge(i)*(s.getCharge(i)+getScreenFactor(i))
+                    *(double)(s.getNumberOfAtoms(i))*sum;
+        }
+        double dSigmaDy = factor*chargeFactor;
+        return dSigmaDy;
     }
 
 
@@ -202,7 +255,7 @@ public class PairCreation extends Interactions implements Function{
 	case 4:
 	    dSigma = getDSigmaDz(x)*x;
 	    break;
-        case 5 : 
+    case 5 : 
 	    y = para[0];
 	    int ithSpecies = (int )para[1];
 	    dSigma = getAsymmetryTerm(x,y,ithSpecies);
@@ -224,7 +277,7 @@ public class PairCreation extends Interactions implements Function{
             System.exit(0);
         }
 
-        return dSigma;
+        return dSigma>0? dSigma:0.0;
 
     }
 
@@ -237,7 +290,7 @@ public class PairCreation extends Interactions implements Function{
 	double beta = y*y/(2.0*(1.0-y));
 	double qsi = (y*massRatio/2.0)*(y*massRatio/2.0)*(1.0-rho*rho)/(1.0-y);
 	double Yrec = (5.0-rho*rho+4.0*beta*(1.0+rho*rho))/
-          	     (2.0*(1.0+3.0*beta)*Math.log(3.0+1.0/qsi)-rho*rho-
+          	     (2.0*(1.0+3.0*beta)*(Math.log1p(1.0/(3.*qsi))+Math.log(3.))-rho*rho-
                       2.0*beta*(2.0-rho*rho));
         double Yin = (4.0+rho*rho+3.0*beta*(1.0+rho*rho))/
 	    ((1.0+rho*rho)*(1.5+2.0*beta)*Math.log(3.0+qsi)+1.0-1.5*rho*rho);
@@ -246,7 +299,7 @@ public class PairCreation extends Interactions implements Function{
         chargeTerm*Math.sqrt((1.0+qsi)*(1.0+Yrec))/
         (1.0+2.0*producedMass*Math.sqrt(E)*s.getRadiation(ithSpecies)*chargeTerm*
 	 (1.0+qsi)*(1.0+Yrec)/(energy*y*(1.0-rho*rho)))) -
-         0.5*Math.log(1.0+(1.5*1.5/(massRatio*massRatio*chargeTerm*chargeTerm))*
+         0.5*Math.log1p((1.5*1.5/(massRatio*massRatio*chargeTerm*chargeTerm))*
 		      (1.0+qsi)*(1.0+Yrec));
 	double Lin = Math.log(s.getRadiation(ithSpecies)*chargeTerm*chargeTerm*
         2.0/3.0*massRatio/(1.0+2.0*producedMass*Math.sqrt(E)*
@@ -254,7 +307,7 @@ public class PairCreation extends Interactions implements Function{
         (energy*y*(1.0-rho*rho))));
 
 	double recoileTerm = 
-          (((2.0+rho*rho)*(1.0+beta)+qsi*(3.0+rho*rho))*Math.log(1.0+1.0/qsi)+
+          (((2.0+rho*rho)*(1.0+beta)+qsi*(3.0+rho*rho))*Math.log1p(1.0/qsi)+
 	  (1.0-rho*rho-beta)/(1.0+qsi)-(3.0+rho*rho))*Lrec;
 	double incomingTerm = 
           (((1.0+rho*rho)*(1.0+1.5*beta)-(1.0+2.0*beta)*(1.0-rho*rho)/qsi)*
@@ -355,6 +408,15 @@ public class PairCreation extends Interactions implements Function{
 	Math.sqrt(1.0-4.0*producedMass/(energy*getYmax()));
 	double yMax = (getYmax()*(1.0+rhoUpperBound)/2.0);
 	return yMax;
+    }
+
+    public double getZmin( ){
+        double chargeTerm = 1.0;
+        return 3.0/4.0*Math.sqrt(E)*mass/energy;
+    }
+
+    public double getZmax( ){
+        return 1. - 4.*producedMass/energy;
     }
 
 

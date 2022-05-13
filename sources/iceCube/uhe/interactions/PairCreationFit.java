@@ -24,13 +24,17 @@ import numRecipes.*;
 */
 public class PairCreationFit extends Interactions implements Function {
 
+    private static final long serialVersionUID = -6304067069071287350L;
+
     private double[] para = new double[2];
     private double[ ] logEArray = new double[140];
     private double[ ] logDyArray = new double[35];
     private double[ ][ ] yDsigmaArray = new double[140][35];
     private static final double ln10 = Math.log(10.0);
 
+    private double[] logDys = new double[35];
 
+    private int isNP = 0;
 
     /** Constructor: Register the Particle and ParticlePoint classes.
 	It also reads the pre-calculated y/E * dsigma/dy
@@ -43,28 +47,51 @@ public class PairCreationFit extends Interactions implements Function {
 	    "iceCube/uhe/interactions/ice/","iceCube/uhe/interactions/rock/"
 	};
 	String objectFile = null;
+    StringBuilder df = new StringBuilder("");
+
+    isNP = p.getIsNP();
+    System.err.println("Setting is: " + isNP);
 
 	if(Flavor==0){ // producing e+e- pair
 	    if(p.getFlavor()==1) {
-		dataFile = "muToePairCreation.dat";
+		    dataFile = "muToePairCreation.dat";
 	    }else if(p.getFlavor()==2) {
-		dataFile = "tauToePairCreation.dat";
+		    dataFile = "tauToePairCreation.dat";
+            if(isNP==1){
+                df.append("stauToePairCreation");
+                df.append((int)p.getMass());
+                df.append("GeV.dat");
+                dataFile = df.toString();
+            }
 	    }
 	}else if(Flavor==1){ // producing mu+mu- pair
 	    if(p.getFlavor()==1) {
-		dataFile = "muTomuPairCreation.dat";
+		    dataFile = "muTomuPairCreation.dat";
 	    }else if(p.getFlavor()==2) {
-		dataFile = "tauTomuPairCreation.dat";
+		    dataFile = "tauTomuPairCreation.dat";
+            if(isNP==1){
+                df.append("stauTomuPairCreation");
+                df.append((int)p.getMass());
+                df.append("GeV.dat");
+                dataFile = df.toString();
+            }
 	    }
 	}else{ // producing tau+tau- pair
 	    if(p.getFlavor()==1) {
-		dataFile = "muTotauPairCreation.dat";
+		    dataFile = "muTotauPairCreation.dat";
 	    }else if(p.getFlavor()==2) {
-		dataFile = "tauTotauPairCreation.dat";
+		    dataFile = "tauTotauPairCreation.dat";
+            if(isNP==1){
+                df.append("stauTotauPairCreation");
+                df.append((int)p.getMass());
+                df.append("GeV.dat");
+                dataFile = df.toString();
+            }
 	    }
 	}
 	
 	objectFile = dataPath[s.getMaterialNumber()].concat(dataFile);
+    System.out.println("Read file: " + dataFile);
 
         DataInputStream in =  
             new DataInputStream(new FileInputStream(objectFile));
@@ -97,12 +124,21 @@ public class PairCreationFit extends Interactions implements Function {
 	double logELow = logEArray[index];
 	double logEUp = logEArray[index+1];
 
+    double[] resLogDyArray = new double[35];
+    if(isNP==1){
+        restoreYarray();
+        resLogDyArray = logDys;
+    }
+    else{
+        resLogDyArray = logDyArray;
+    }
+
 	double logY = Math.log(y)/ln10;
 	double dSigmaDyLow = 
-	    Interpolation.mThPolynominalInterpolate(logDyArray,
+	    Interpolation.mThPolynominalInterpolate(resLogDyArray,
 	    yDsigmaArray[index],35,logY,4);
 	double dSigmaDyUp = 
-	    Interpolation.mThPolynominalInterpolate(logDyArray,
+	    Interpolation.mThPolynominalInterpolate(resLogDyArray,
 	    yDsigmaArray[index+1],35,logY,4);
 	double yEdSigmaDy = dSigmaDyLow + (dSigmaDyUp-dSigmaDyLow)/(logEUp-logELow)*
 	    (logEnergy-logELow);
@@ -116,6 +152,11 @@ public class PairCreationFit extends Interactions implements Function {
 	that is determined in an individual interaction channel.
     */
     public boolean isValidInelasticity(double y){ 
+        if(isNP>0){
+            if((getYminOrig()+roundOffError)<=y*1.01 &&
+                    y <= (getYmaxOrig()-roundOffError)) return true;
+            else return false;
+        }
         if((getYmin()+roundOffError)<= y && 
            y <= (getYmax()-roundOffError)) return true;
         else return false;
@@ -125,14 +166,33 @@ public class PairCreationFit extends Interactions implements Function {
 
     /** Getting the range of allowed y for a given interaction */
     public double getYmin( ){
+        if(isNP==1) return getYminOrig();
 	double yMin =  Math.pow(10.0,logDyArray[34]);
 	return yMin;
     }
     public double getYmax( ){
+        if(isNP==1) return getYmaxOrig();
 	double yMax =  Math.pow(10.0,logDyArray[0]);
 	return yMax;
     }
 
+    public double getYminOrig(){
+        return 4.0*producedMass/energy;
+    }
+
+    public double getYmaxOrig(){
+        double chargeTerm = Math.pow(11.,1./3.);
+        return 1.0-0.75*Math.sqrt(E)*mass/energy*chargeTerm;
+    }
+
+    public double getZmin( ){
+        double chargeTerm = 1.0;
+        return 3.0/4.0*Math.sqrt(E)*mass/energy;
+    }
+
+    public double getZmax( ){
+        return 1. - 4.*producedMass/energy;
+    }
 
     /** Checking the particle kind involved with
 	a given interaction. Only muons and taus
@@ -156,6 +216,19 @@ public class PairCreationFit extends Interactions implements Function {
         String name = channel.concat("from ").
             concat(incidentParticle).concat(" to ").concat(producedParticle);
         return name;
+    }
+
+
+    public void restoreYarray(){
+        double Ymax = getYmaxOrig()*0.99999;
+        double Ymin = getYminOrig();
+        double LogMidY = (Math.log10(Ymax)+Math.log10(Ymin))/2.;
+        double dULogY = (Math.log10(Ymax) - LogMidY)/5.;
+        double dLLogY = (LogMidY - Math.log10(Ymin))/30.;
+        int jLogY;
+        for(jLogY=0;jLogY<35;jLogY++){
+            logDys[jLogY] = jLogY<5 ? LogMidY+dULogY*(5.-jLogY) : LogMidY-dLLogY*(jLogY-5.);
+        }
     }
 
 }
