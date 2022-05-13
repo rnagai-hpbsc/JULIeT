@@ -8,6 +8,8 @@ import numRecipes.Interpolation;
 
 public class PhotoNuclear extends Interactions implements Function {
 
+    private static final long serialVersionUID = -6956746471349976549L;
+
     static final double ln10 = Math.log(10.0);
     private String photoNuFile    = null;
     private String photoNuFileMu  = "iceCube/uhe/interactions/BB/muPhoto.dat";
@@ -18,15 +20,21 @@ public class PhotoNuclear extends Interactions implements Function {
     private final double ProtonMass = 938.28e-3;  //Proton Mass
     private double nuclearMass = ProtonMass;
 
+    private int isNP = 0;
+
     /** Constructor */
     public PhotoNuclear(Particle p, ParticlePoint s) throws IOException{
 
         super(p, s, 3); // produced particle is pion
 
+        isNP = p.getIsNP();
+
+        if(isNP!=1) {
         if(p.getFlavor() == 1 && p.getDoublet() == 1) // Mu
             photoNuFile = photoNuFileMu;
         else if(p.getFlavor() == 2 && p.getDoublet() == 1) // Tau
             photoNuFile = photoNuFileTau;
+
 
         File file = new File(photoNuFile);
         BufferedReader in = new BufferedReader(new FileReader(file));
@@ -51,6 +59,7 @@ public class PhotoNuclear extends Interactions implements Function {
         }
 
         in.close();
+        }
     }
 
     /** Differential cross section dsigma/dy [cm^2]
@@ -68,7 +77,7 @@ public class PhotoNuclear extends Interactions implements Function {
 	    atomicWeight += s.getAtomicNumber(i)*(double)s.getNumberOfAtoms(i);
         } 
 
-        dSigmaDy = factor*softTerm*getAbsorptionTerm(y)*1.0e-30*y + atomicWeight*getHardTerm(y);
+        dSigmaDy = factor*softTerm*getAbsorptionTerm(y)*1.0e-30*y;// + atomicWeight*getHardTerm(y);
         return dSigmaDy;
     }
 
@@ -78,13 +87,24 @@ public class PhotoNuclear extends Interactions implements Function {
         double z    = 0.00282*Math.pow(s.getAtomicNumber(i), 1.0/3.0)*getAbsorptionTerm(y);
         double t    = (mass*mass*y*y)/(1.0-y);
         double mSq  = mass*mass;
-        double m1Sq = 0.54*0.54; //[GeV^2]
-        double m2Sq = 1.80*1.80; //[GeV^2]
-        soft = (h+2.0*mSq/m2Sq)*Math.log(1.0+m2Sq/t)
-	    - 2.0*mSq/t*(1.0-0.25*m2Sq/t*Math.log(1.0+t/m2Sq))
-	    + getG(z, s.getCharge(i))*(h*(Math.log(1.0+m1Sq/t)-m1Sq/(m1Sq + t))
-				       + 4.0*mSq/m1Sq*Math.log(1.0+m1Sq/t)
-				       - 2.0*mSq/t*(1.0-(0.25*m1Sq-t)/(m1Sq + t)));
+        double m1Sq = 0.54;//*0.54; //[GeV^2]
+        double m2Sq = 1.80;//*1.80; //[GeV^2]
+        // original 
+        soft = (h+2.0*mSq/m2Sq)*Math.log1p(m2Sq/t)
+	    - 2.0*mSq/t*(1.0-0.25*m2Sq/t*Math.log1p(t/m2Sq))
+	    + getG(z, s.getCharge(i))*(h*(Math.log1p(m1Sq/t)-m1Sq/(m1Sq + t))
+				       + 4.0*mSq/m1Sq*Math.log1p(m1Sq/t)
+		               - 2.0*mSq/t*(1.0-(0.25*m1Sq-t)/(m1Sq + t)));
+        // editted based on Phys.Rev.D64 074015
+        /*soft = h*Math.log1p(m2Sq/t)
+	    - 2.0*mSq/t*(1.0-0.25*m2Sq/t*Math.log1p(t/m2Sq))
+	    + getG(z, s.getCharge(i))*(h*(Math.log1p(m1Sq/t)-m1Sq/(m1Sq + t))
+		               - 2.0*mSq/t*(1.0-0.25*m1Sq/(m1Sq + t)));*/
+        // From Phys.Rev.D63, 094020 (note: the paper is wrong in the logarithm -- scale should be tuned): 
+        /*soft = getG(z, s.getCharge(i))*(h*Math.log1p(m1Sq/t)-h*m1Sq/(m1Sq+t)-2.0*(1.0-y)/y/y)
+            + (h*Math.log1p(m2Sq/t)-2.0*(1.0-y)/y/y) + 0.5*(1.0-y)/y/y*(getG(z, s.getCharge(i))*m1Sq/(m1Sq+t)
+                    + m2Sq/t*Math.log1p(t/m2Sq)); */
+
         return soft;
     }
 
@@ -128,6 +148,10 @@ public class PhotoNuclear extends Interactions implements Function {
     /** Checking the range of the given inelasticity y
 	that is determined in an individual interaction channel. */
     public boolean isValidInelasticity(double y){
+        if(isNP==1){
+            if(0.0<=y && y<=getYmax()) return true;
+            else return false;
+        }
 	if((getYmin()+roundOffError) <= y &&
 	   y <= (getYmax() - roundOffError)) return true;
 	else return false;
@@ -135,6 +159,13 @@ public class PhotoNuclear extends Interactions implements Function {
 
     /** Getting the range of allowed y for a given interaction */
     public double getYmin(){
+        if(isNP==1){
+            if(energyCut==0.0){
+                return ((mass+0.134)*(mass+0.134)-mass*mass)/(2.*mass*energy);
+            } else {
+                return energyCut/energy;
+            }
+        }
         if(energyCut == 0.0){
             double yMin = 1.0e-6;
             return yMin;
@@ -147,6 +178,15 @@ public class PhotoNuclear extends Interactions implements Function {
         double yMax = 1.0-mass/energy;
         return yMax;
     }
+
+    public double getZmin(){
+        return mass/energy;
+    }
+
+    public double getZmax(){
+        return 1.-energyCut/energy;
+    }
+
 
     
     /** Checking the particle kind involved with a given interaction.
