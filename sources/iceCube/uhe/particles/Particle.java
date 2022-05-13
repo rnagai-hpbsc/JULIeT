@@ -30,6 +30,8 @@ public class Particle implements Serializable {
     private double lifetime;      // Partilcle Life Time [sec].
     private int flavor;           // Particle Flavor.
     private int doublet;          // Lepton Doublet index.
+    
+    private int isNP = 0;
 
     private static final long serialVersionUID = -8403086164562645730L;
     /** Number of the "Flavor" valuables to define the particle. */
@@ -266,6 +268,13 @@ public class Particle implements Serializable {
 	logEnergyMatrix[ilogE] = matrixElement;
     }
 
+    public int getIsNP(){
+        return isNP;
+    }
+
+    public void setIsNP(int value){
+        isNP = value;
+    }
 
 
 }
