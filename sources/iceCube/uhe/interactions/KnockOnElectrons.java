@@ -17,6 +17,7 @@ import numRecipes.*;
 */
 
 public class KnockOnElectrons extends Interactions implements Function{
+    private static final long serialVersionUID =  5761164813677926321L;
 
     private double massRatio;
     private double[] para = new double[2];
