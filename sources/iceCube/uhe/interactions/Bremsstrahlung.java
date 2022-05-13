@@ -17,15 +17,19 @@ import numRecipes.*;
 */
 public class  Bremsstrahlung extends Interactions implements Function{
 
+    private static final long serialVersionUID = -2299574230818235536L;
+
     private double massRatio;
     private double[] para = new double[2];
 
 
+    private int isNP = 0;
 
     /** Constructor: Register the Particle and ParticlePoint classes */
     public Bremsstrahlung(Particle p, ParticlePoint s){
 	super(p, s, 0);
 	massRatio = mass/producedMass;
+    isNP = p.getIsNP();
     }
 
 
@@ -40,7 +44,7 @@ public class  Bremsstrahlung extends Interactions implements Function{
 
 	for(int i=0;i<s.NumberOfSpecies[s.getMaterialNumber( )];i++){
 	    if(y<getYmaxCharge(i))
-	    chargeFactor += s.getCharge(i)*s.getCharge(i)*
+	    chargeFactor += s.getCharge(i)*(s.getCharge(i)+1.)*
 		(double )(s.getNumberOfAtoms(i))*getChargeFactor(y,i);
 	}
 	double dSigmaDy = factor*chargeFactor;
@@ -61,30 +65,32 @@ public class  Bremsstrahlung extends Interactions implements Function{
 	double a2 = 724.2/(chargeTerm*chargeTerm*producedMass);
 	double x1 = a1*qMin;
 	double x2 = a2*qMin;
-	double muonMass = Particle.particleMasses[1][1];
-	double qC = 1.9*muonMass/chargeTerm;
-	double qsi = Math.sqrt(1.0+4.0*mass*mass/(qC*qC));
+	//double muonMass = Particle.particleMasses[1][1];
+	//double qC = 1.9*muonMass/chargeTerm; -- bug
+    double qC = 1.9*mass/chargeTerm;
+	//double qsi = Math.sqrt(1.0+4.0*mass*mass/(qC*qC));
+    double qsi = Math.sqrt(1.0+4.0/1.9/1.9*chargeTerm*chargeTerm);
 	double delta1;
 	double delta2;
 	if(s.getCharge(ithSpecies)==1.0){ // H
 	    delta1 = 0.0;
 	    delta2 = 0.0;
 	}else { // Otherwise
-	    delta1 = Math.log(mass/qC)+qsi/2.0*
+	    delta1 = Math.log(chargeTerm/1.9)+qsi/2.0*
 		Math.log((qsi+1.0)/(qsi-1.0));
-	    delta2 = Math.log(mass/qC)+qsi*(3.0-qsi*qsi)/4.0*
-		Math.log((qsi+1.0)/(qsi-1.0)) + 2.0*mass*mass/(qC*qC);
+	    delta2 = Math.log(chargeTerm/1.9)+qsi*(3.0-qsi*qsi)/4.0*
+		Math.log((qsi+1.0)/(qsi-1.0)) + 2.0*chargeTerm*chargeTerm/1.9/1.9;
 	}
 	double arcTan1=Math.atan(1.0/x1);
 	double arcTan2=Math.atan(1.0/x2);
 
-	double psi1 = 0.5*(1.0+Math.log(mass*mass*a1*a1/(1.0+x1*x1)))-x1*arcTan1+
-	    (0.5*(1.0+Math.log(mass*mass*a2*a2/(1.0+x2*x2)))-x2*arcTan2)/
+	double psi1 = 0.5*(1.0+2.0*Math.log(mass*a1)-Math.log1p(x1*x1))-x1*arcTan1+
+	    (0.5*(1.0+2.0*Math.log(mass*a2)-Math.log1p(x2*x2))-x2*arcTan2)/
 	    s.getCharge(ithSpecies) - delta1;
-	double psi2 = 0.5*(2.0/3.0+Math.log(mass*mass*a1*a1/(1.0+x1*x1)))
-	    +2.0*x1*x1*(1.0-x1*arcTan1+3.0/4.0*Math.log(x1*x1/(1.0+x1*x1)))+
-	    (0.5*(2.0/3.0+Math.log(mass*mass*a2*a2/(1.0+x2*x2)))
-	     +2.0*x2*x2*(1.0-x2*arcTan2+3.0/4.0*Math.log(x2*x2/(1.0+x2*x2))))/
+	double psi2 = 0.5*(2.0/3.0+2.0*Math.log(mass*a1)-Math.log1p(x1*x1))
+	    +2.0*x1*x1*(1.0-x1*arcTan1+3.0/4.0*(2.0*Math.log(x1)-Math.log1p(x1*x1)))+
+	    (0.5*(2.0/3.0+(2.0*Math.log(mass*a2)-Math.log1p(x2*x2)))
+	     +2.0*x2*x2*(1.0-x2*arcTan2+3.0/4.0*(2.0*Math.log(x2)-Math.log1p(x2*x2))))/
 	    s.getCharge(ithSpecies) - delta2;
 
 	double term = yFactor1*psi1-yFactor2*psi2;
@@ -98,6 +104,10 @@ public class  Bremsstrahlung extends Interactions implements Function{
 	that is determined in an individual interaction channel.
     */
     public boolean isValidInelasticity(double y){ 
+        if(isNP>0){
+            if(0.0<=y && y<= getYmax()) return true;
+            else return false;
+        }
         if((getYmin()+roundOffError)<= y && 
            y <= (getYmax()-roundOffError)) return true;
         else return false;
@@ -124,6 +134,14 @@ public class  Bremsstrahlung extends Interactions implements Function{
 	double chargeTerm = Math.pow(s.getCharge(ithSpecies),1.0/3.0);
 	double yMax = 1.0-3.0/4.0*Math.sqrt(E)*mass/energy*chargeTerm;
 	return yMax;
+    }
+
+    public double getZmin(){
+        double chargeTerm = 1.0;
+        return 3./4.*Math.sqrt(E)*mass/energy*chargeTerm;
+    }
+    public double getZmax(){
+        return 1.-energyCut/energy;
     }
 
 
