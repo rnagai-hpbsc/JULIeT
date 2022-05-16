@@ -37,11 +37,14 @@ y*Eincoming is obtained by getTransferMatrix( ).
 public class InteractionsMatrix implements Serializable {
 
     Interactions interactions;
+    private static final long serialVersionUID = -3532858511737660878L;
 
     double[][] transferMtx;
     double[][] transferAMtx;
     double[] sigmaMtx;
     double[] inelasticityMtx;
+    double[][] rawTAMtx; // added 
+
     /** Array Dimension */
     int dimension = Particle.getDimensionOfLogEnergyMatrix();
     /** Bin width of the matrix element. */
@@ -54,6 +57,7 @@ public class InteractionsMatrix implements Serializable {
 	transferAMtx = new double[dimension][dimension];
 	sigmaMtx = new double[dimension];
 	inelasticityMtx = new double[dimension];
+    rawTAMtx = new double[dimension][dimension];
     }
 
 
@@ -110,6 +114,74 @@ public class InteractionsMatrix implements Serializable {
 	}
     }
 
+    /** Calculate the transfer matrix for High mass particles **/
+    public double setTransferMatrixHighMass(int iLogE, int jLogE){
+
+        interactions.setIncidentParticleEnergy(iLogE);/** Setup the primary E*/
+
+        if(isValidIndex(iLogE) && isValidIndex(jLogE)){
+            if(jLogE>iLogE){
+                transferMtx[iLogE][jLogE] = 0.0;
+                transferAMtx[iLogE][jLogE] = 0.0;
+            }
+            else {
+                double logY = delta*(double)(jLogE-iLogE);
+                double logYLow = logY - 0.5*delta;
+                double logYUp  = logY + 0.5*delta;
+
+                
+                double yLow = Math.pow(10.0,logYLow);
+                double yLowRange = yLow;
+                if(yLow<=interactions.getYmin())
+                    yLowRange = interactions.getYmin( );
+
+                double yUp = Math.pow(10.0,logYUp);
+                double yUpRange = yUp;
+                if(yUp>=interactions.getYmax()-2.0*interactions.roundOffError)
+                    yUpRange = interactions.getYmax( ) - 2.0*interactions.roundOffError;
+
+                if(yLowRange<yUpRange){
+                    transferMtx[iLogE][jLogE]=
+                        interactions.integralDSigmaDy(yLowRange,yUpRange);
+                }else{
+                    transferMtx[iLogE][jLogE] = 0.0;
+                }
+
+                /*yLowRange = yLow; yUpRange = yUp;
+                if(yLow<=(1.0-interactions.getYmax()+2.0*interactions.roundOffError))
+                    yLowRange = 1.0 - interactions.getYmax( ) + 2.0*interactions.roundOffError;
+                if(yUp>=(1.0-interactions.getYmin()))
+                    yUpRange = 1.0 - interactions.getYmin();
+
+                if(yLowRange<yUpRange){
+                    transferAMtx[iLogE][jLogE] = 
+                        interactions.integralDSigmaDz(yLowRange,yUpRange);*/
+                double zLowRange = yLow; 
+                double zUpRange = yUp;
+                if(zLowRange<=interactions.getZmin())
+                    zLowRange = interactions.getZmin();
+                if(zUpRange>=interactions.getZmax())
+                    zUpRange = interactions.getZmax();
+                if(1.-zUpRange<1.-zLowRange){
+                    transferAMtx[iLogE][jLogE] = 
+                        interactions.integralDSigmaDy(1.-zUpRange,1.-zLowRange);
+                }else{
+                    transferAMtx[iLogE][jLogE]=0.0;
+                }
+
+                rawTAMtx[iLogE][jLogE] = transferAMtx[iLogE][jLogE];
+                double rawTransferAMtx = transferAMtx[iLogE][jLogE];
+
+                //if (transferAMtx[iLogE][jLogE] > getSigmaMatrix(iLogE))
+                //    transferAMtx[iLogE][jLogE] = getSigmaMatrix(iLogE)*0.99999;
+
+                return rawTransferAMtx;
+            }
+            return 0.0;
+        }
+        return 0.0;
+    }
+
     /** Get the element of the transfter matrix  jlogE ~ log10(y*E) */
     public double getTransferMatrix(int iLogE, int jLogE){
 	if(isValidIndex(iLogE) && isValidIndex(jLogE)){
@@ -143,6 +215,18 @@ public class InteractionsMatrix implements Serializable {
 	}
     }
 
+    public void verifySigmaMatrix(int iLogE){
+        int flag = 0;
+        for (int jLogE=0;jLogE<dimension;jLogE++){
+            if(transferAMtx[iLogE][jLogE]>sigmaMtx[iLogE]) flag += 1;
+        }
+        if (flag>0){
+            sigmaMtx[iLogE] = 0.0;
+            for (int jLogE=0;jLogE<dimension;jLogE++){
+                sigmaMtx[iLogE] += transferAMtx[iLogE][jLogE];
+            }
+        }
+    }
 
 
     /** Get the element of the total cross section matrix */

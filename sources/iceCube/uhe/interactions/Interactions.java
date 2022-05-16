@@ -39,7 +39,7 @@ abstract class Interactions implements Function, Serializable{
     static final double E = Math.E;
 
     /** RoundOff Error.*/
-    static final double roundOffError = 1.0e-9;
+    double roundOffError = 1.0e-9;
 
     /** The Particle class involved with this interaction.*/
     Particle p;
@@ -131,6 +131,10 @@ abstract class Interactions implements Function, Serializable{
 	return energy;
     }
 
+    public void setRoundOffError(double value){
+        roundOffError = value;
+    }
+
 
 
     /** 
@@ -162,6 +166,8 @@ abstract class Interactions implements Function, Serializable{
     /** Getting the range of allowed y for a given interaction */
     abstract double getYmin( );
     abstract double getYmax( );
+    abstract double getZmin( );
+    abstract double getZmax( );
 
     /** Energy Cut Parameter in integration to obtain the total cross section.*/
     public void setEnergyCut(double cutEnergy){
@@ -205,6 +211,7 @@ abstract class Interactions implements Function, Serializable{
 	}
 	return sum;
     }
+
     /** Integral dSigma/dz over a given range to obtain a partial
 	cross section */
     public double integralDSigmaDz(double lowerZ, double upperZ){
@@ -220,6 +227,7 @@ abstract class Interactions implements Function, Serializable{
 	}
 	return sum;
     }
+
     /** Integral y*dSigma/dy over a given range to obtain the inelasticity
 	distribution. The energy transfer probability would also require
         this value. */
@@ -236,6 +244,7 @@ abstract class Interactions implements Function, Serializable{
 	}
 	return sum;
     }
+
     /** Integral z*dSigma/dz over a given range to obtain the inelasticity
 	distribution. The energy transfer probability would also require
         this value.  z = 1-y */
@@ -252,7 +261,6 @@ abstract class Interactions implements Function, Serializable{
 	}
 	return sum;
     }
-
 
     /** 
 	<pre>
@@ -292,7 +300,7 @@ abstract class Interactions implements Function, Serializable{
             System.exit(0);
         }
 
-        return dSigma;
+        return dSigma>0.0? dSigma:0.0;
 
     }
 
@@ -309,11 +317,12 @@ abstract class Interactions implements Function, Serializable{
 
 	System.err.println(interactionName());
 	System.err.println("The integral range out of the allowed y");
-	System.err.println("Ymin " + getYmin() + " Ymax " + getYmax());
-	System.err.println("lowerY " + lowerY + " upperY " + upperY);
+	System.err.println("Ymin   " + getYmin() + " Ymax   " + getYmax());
+	System.err.println("lowerY " + lowerY    + " upperY " + upperY);
 	System.err.println("The Incident Particle " +
 			   p.particleName(p.getFlavor(),p.getDoublet()));
 	System.err.println("The Incident Energy " + energy + " [GeV]");
+    System.err.println("RoundOffError setting: " + roundOffError);
     }
 
 }
