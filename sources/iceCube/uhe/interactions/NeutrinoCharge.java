@@ -17,6 +17,8 @@ import numRecipes.*;
 */
 public class NeutrinoCharge extends Interactions implements Function {
 
+    private static final long serialVersionUID = -2279584979248559159L;
+
     private double[] para = new double[2];
     private String  neutrinoFile = "iceCube/uhe/interactions/nucch5.dat";
     private double[ ] logEArray = new double[31];
@@ -141,6 +143,9 @@ public class NeutrinoCharge extends Interactions implements Function {
     public double getYmax( ){
 	return 1.0- roundOffError;
     }
+
+    public double getZmin(){return 0;}
+    public double getZmax(){return 0;}
 
 
     /** Checking the particle kind involved with
