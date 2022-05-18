@@ -28,6 +28,8 @@ import numRecipes.*;
 */
 abstract class Interactions implements Function, Serializable{
 
+    static final long serialVersionUID = -3161430732575734745L;
+
     /** Fine Stracture Const.*/
     static final double Alpha = 1.0D/137.035989561D;
     /** Classical Electron Radius [cm].*/
