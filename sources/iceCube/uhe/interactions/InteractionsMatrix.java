@@ -228,6 +228,22 @@ public class InteractionsMatrix implements Serializable {
         }
     }
 
+    public void fillSigmaMatrix(int iLogE, double value){
+        sigmaMtx[iLogE] = value;
+    }
+
+    public void fillInelasticityMatrix(int iLogE, double value){
+        inelasticityMtx[iLogE] = value;
+    }
+
+    public void fillTransferMatrix(int iLogE, int jLogE, double value){
+        transferMtx[iLogE][jLogE] = value;
+    }
+
+    public void fillLeptonTransferMatrix(int iLogE, int jLogE, double value){
+        transferAMtx[iLogE][jLogE] = value;
+    }
+
 
     /** Get the element of the total cross section matrix */
     public double getSigmaMatrix(int iLogE){
