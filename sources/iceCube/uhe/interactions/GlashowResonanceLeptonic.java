@@ -30,6 +30,8 @@ import numRecipes.*;
 */
 public class  GlashowResonanceLeptonic extends Interactions implements Function{
 
+    protected static final long serialVersionUID = 4005838627932798901L;
+
     protected boolean isPerNucleon = true; // Cross secion is given as per target nucleon
     protected double chargePerNucleon = 0.0;  // number of electrons per nucleon
                                               // calculated in the constructor.
@@ -134,6 +136,9 @@ public class  GlashowResonanceLeptonic extends Interactions implements Function{
     public double getYmax(){
 	return 1.0;
     }
+
+    public double getZmin(){return 0.0;}
+    public double getZmax(){return 1.0;}
 
     /** the area given by the Weak coupling constant 
 	<pre>
