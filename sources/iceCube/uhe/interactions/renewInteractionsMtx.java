@@ -29,6 +29,8 @@ public class renewInteractionsMtx {
             mass = Double.valueOf(args[4]).doubleValue();
         }
 
+        String[] storeDir = {"iceCube/uhe/interactions/ice/new/","iceCube/uhe/interactions/rock/new/"};
+
         DynamicParticle lepton = new DynamicParticle(flavor, doublet, energy);
         lepton.setMass(mass);
         lepton.setIsNP(1);
@@ -38,21 +40,28 @@ public class renewInteractionsMtx {
         ParticlePoint s = new ParticlePoint(0.0, 5.0*Math.PI/180.0, material);
 
         InteractionsMatrix intMtx = selectIntMatrix(intName, lepton, s, producedFlavor);
-        fillMatrixElements(intMtx, "test.txt", 0);
+        fillMatrixElements(intMtx, storeDir[material] + renewFilename + "_sigma.txt", 0);
         for (int i=0; i<700; i++) { 
             double allsum = intMtx.getSigmaMatrix(i);
             System.out.print(allsum + ((i+1)==700?"\n":","));
         }
-        fillMatrixElements(intMtx, "test.txt", 1);
+        fillMatrixElements(intMtx, storeDir[material] + renewFilename + "_inela.txt", 1);
         for (int i=0; i<700; i++) {
             double inela = intMtx.getInelasticityMatrix(i);
             System.out.print(inela + ((i+1)==700?"\n":","));
         }
+        fillMatrixElements(intMtx, storeDir[material] + renewFilename + "_trans.txt", 2);
+        fillMatrixElements(intMtx, storeDir[material] + renewFilename + "_surviv.txt", 3);
+
+        FileOutputStream out = new FileOutputStream(storeDir[material] + renewFilename);
+        InteractionsMatrixOutput.outputInteractionsMatrix(intMtx, out);
+        out.close( );
 
     }
 
     public static void fillMatrixElements(InteractionsMatrix intMtx, String filename, int func) throws IOException {
         File file = new File(filename);
+        System.out.println("Read " + filename + "..."); 
         BufferedReader reader = null;
 
         try {
@@ -123,4 +132,5 @@ public class renewInteractionsMtx {
         filename += "Mtx" + (int)mass + "GeV";
         return filename;
     }
+
 }
