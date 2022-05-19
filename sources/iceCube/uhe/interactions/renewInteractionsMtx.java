@@ -46,12 +46,9 @@ public class renewInteractionsMtx {
             System.out.print(allsum + ((i+1)==700?"\n":","));
         }
         fillMatrixElements(intMtx, storeDir[material] + renewFilename + "_inela.txt", 1);
-        for (int i=0; i<700; i++) {
-            double inela = intMtx.getInelasticityMatrix(i);
-            System.out.print(inela + ((i+1)==700?"\n":","));
-        }
         fillMatrixElements(intMtx, storeDir[material] + renewFilename + "_trans.txt", 2);
         fillMatrixElements(intMtx, storeDir[material] + renewFilename + "_surviv.txt", 3);
+        System.out.println(intMtx.getTransferMatrix(100,50));
 
         FileOutputStream out = new FileOutputStream(storeDir[material] + renewFilename);
         InteractionsMatrixOutput.outputInteractionsMatrix(intMtx, out);
@@ -68,14 +65,14 @@ public class renewInteractionsMtx {
             reader = new BufferedReader(new FileReader(file));
 
             String text;
-            int j = 0;
+            int i = 0;
             while ((text = reader.readLine()) != null) {
                 String[] nums = text.split(",");
-                for (int i=0; i<nums.length; i++) {
-                    double num = Double.parseDouble(nums[i]);
+                for (int j=0; j<nums.length; j++) {
+                    double num = Double.parseDouble(nums[j]);
                     selectFillMatrix(intMtx, func, i, j, num);
                 }
-                j++; 
+                i++; 
             }
         } catch (FileNotFoundException e) {
             System.out.println("Not found");
@@ -90,8 +87,8 @@ public class renewInteractionsMtx {
 
     public static void selectFillMatrix(InteractionsMatrix intMtx, int func, int i, int j, double value) {
         switch (func) {
-            case 0: intMtx.fillSigmaMatrix(i, value); break;
-            case 1: intMtx.fillInelasticityMatrix(i, value); break;
+            case 0: intMtx.fillSigmaMatrix(j, value); break;
+            case 1: intMtx.fillInelasticityMatrix(j, value); break;
             case 2: intMtx.fillTransferMatrix(i, j, value); break; 
             case 3: intMtx.fillLeptonTransferMatrix(i, j, value); break;
         }
