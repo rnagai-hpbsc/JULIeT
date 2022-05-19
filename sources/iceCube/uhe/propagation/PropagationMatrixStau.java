@@ -323,20 +323,22 @@ public class PropagationMatrixStau {
 
         // Checking the Particle flavors
         if(nuE.getFlavor( )== 0 &&  nuE.getDoublet( ) == 0){// Check nuE
-            System.err.println("Checked nuE.");
             this.nuE = nuE;
+            System.err.println("Checked nuE.");
         }else{
             System.err.println("This is NOT e-nu !!");
             System.exit(0);
         }
         if(nuMu.getFlavor( )== 1 &&  nuMu.getDoublet( ) == 0){// Check nuMu
             this.nuMu = nuMu;
+            System.err.println("Checked nuMu.");
         }else{
             System.err.println("This is NOT mu-nu !!");
             System.exit(0);
         }
         if(nuTau.getFlavor( )== 2 &&  nuTau.getDoublet( ) == 0){// Check nuTau
             this.nuTau = nuTau;
+            System.err.println("Checked nuTau.");
         }else{
             System.err.println("This is NOT tau-nu !!");
             System.exit(0);
@@ -344,18 +346,21 @@ public class PropagationMatrixStau {
 
         if(e.getFlavor( )== 0 &&  e.getDoublet( ) == 1){// Check e
             this.e = e;
+            System.err.println("Checked e.");
         }else{
             System.err.println("This is NOT e !!");
             System.exit(0);
         }
         if(mu.getFlavor( )== 1 &&  mu.getDoublet( ) == 1){// Check mu
             this.mu = mu;
+            System.err.println("Checked mu.");
         }else{
             System.err.println("This is NOT mu-nu !!");
             System.exit(0);
         }
         if(tau.getFlavor( )== 2 &&  tau.getDoublet( ) == 1){// Check Tau
             this.tau = tau;
+            System.err.println("Checked tau.");
         }else{
             System.err.println("This is NOT tau !!");
             System.exit(0);
@@ -363,6 +368,7 @@ public class PropagationMatrixStau {
 
         if(pi.getFlavor( )== 3 &&  pi.getDoublet( ) == 1){// Check pi
             this.pi = pi;
+            System.err.println("Checked pi.");
         }else{
             System.err.println("This is NOT pi !!");
             System.exit(0);
